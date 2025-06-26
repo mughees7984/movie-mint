@@ -6,6 +6,7 @@ import Navbar from "./components/Navbar";
 import LatestStories from "./components/LatestStories";
 import RecentProjects from "./components/RecentProjects";
 import Faq from "./components/Faq";
+import Hero from "./components/Hero";
 import Footer from "./components/Footer";
 import UpcomingProjects from "./components/UpcomingProjects";
 function App() {
@@ -15,6 +16,7 @@ function App() {
     <>
       <div className="w-[90%] mx-auto">
         <Navbar />
+        <Hero/>
         <LatestStories />
         <RecentProjects/>
         <UpcomingProjects/>
