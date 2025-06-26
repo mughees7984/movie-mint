@@ -1,11 +1,52 @@
 import { useState } from "react";
 import { ChevronDown, Calendar, MapPin, Film, Star } from "lucide-react";
+import { HiOutlineMenuAlt2 } from "react-icons/hi";
+
+// Dropdown reusable component
+function Dropdown({ label, options, open, setOpen, onSelect }) {
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen((prev) => !prev)}
+                className="flex items-center gap-2 bg-[#b0d357] text-black px-4 md:px-6 py-2 rounded-full text-sm font-semibold hover:bg-lime-500 transition-colors"
+            >
+                {label}
+                
+                <HiOutlineMenuAlt2 className={`w-4 h-4 transition-transform `} />
+
+            </button>
+            {open && (
+                <div className="absolute top-full mt-1 right-0 bg-gray-800 border border-gray-600 rounded-lg py-2 min-w-32 z-10 shadow-lg">
+                    <div className="text-sm text-gray-300">
+                        {options.map((option) => (
+                            <div
+                                key={option}
+                                className="hover:bg-gray-700 px-4 py-2 cursor-pointer"
+                                onClick={() => {
+                                    onSelect(option);
+                                    setOpen(false);
+                                }}
+                            >
+                                {option}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function UpcomingProjects() {
     const [genreOpen, setGenreOpen] = useState(false);
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [locationOpen, setLocationOpen] = useState(false);
     const [showMovies, setShowMovies] = useState(false);
+
+    // Filter state
+    const [selectedGenre, setSelectedGenre] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedLocation, setSelectedLocation] = useState(null);
 
     // Sample movie data
     const sampleMovies = [
@@ -59,6 +100,27 @@ export default function UpcomingProjects() {
         },
     ];
 
+    // Filtered movies
+    const filteredMovies = sampleMovies.filter((movie) => {
+        return (
+            (!selectedGenre || movie.genre === selectedGenre) &&
+            (!selectedCategory || movie.category === selectedCategory) &&
+            (!selectedLocation || movie.location === selectedLocation)
+        );
+    });
+
+    // Dropdown options
+    const genreOptions = ["Action", "Drama", "Comedy", "Thriller", "Romance", "Sci-Fi"];
+    const categoryOptions = ["Blockbuster", "Independent", "Documentary", "Drama"];
+    const locationOptions = ["New York", "Los Angeles", "Miami", "Paris"];
+
+    // Reset filters
+    const resetFilters = () => {
+        setSelectedGenre(null);
+        setSelectedCategory(null);
+        setSelectedLocation(null);
+    };
+
     return (
         <div className="min-h-screen bg-black">
             {/* Top section with filters */}
@@ -69,142 +131,40 @@ export default function UpcomingProjects() {
                         <button className="px-4 py-1 rounded-full border border-lime-400 text-sm font-bold text-lime-400 tracking-wide">
                             UPCOMING <span className="text-white">PROJECTS</span>
                         </button>
-                        <div className="h-[2px] bg-lime-400 w-[150px] mt-4" />
+                        <div className="h-[2px] bg-[#b0d357] w-[150px] mt-4" />
                     </div>
 
                     {/* Right side - Filter buttons */}
                     <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                        {/* Genre dropdown */}
-                        <div className="relative">
+                        <Dropdown
+                            label={selectedGenre || "Genre"}
+                            options={genreOptions}
+                            open={genreOpen}
+                            setOpen={setGenreOpen}
+                            onSelect={setSelectedGenre}
+                        />
+                        <Dropdown
+                            label={selectedCategory || "Category"}
+                            options={categoryOptions}
+                            open={categoryOpen}
+                            setOpen={setCategoryOpen}
+                            onSelect={setSelectedCategory}
+                        />
+                        <Dropdown
+                            label={selectedLocation || "Location"}
+                            options={locationOptions}
+                            open={locationOpen}
+                            setOpen={setLocationOpen}
+                            onSelect={setSelectedLocation}
+                        />
+                        {(selectedGenre || selectedCategory || selectedLocation) && (
                             <button
-                                onClick={() => setGenreOpen(!genreOpen)}
-                                className="flex items-center gap-2 bg-lime-400 text-black px-4 md:px-6 py-2 rounded-full text-sm font-semibold hover:bg-lime-500 transition-colors"
+                                onClick={resetFilters}
+                                className="ml-2 text-xs text-gray-400 hover:text-lime-400 underline"
                             >
-                                Genre
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    className={`transition-transform ${
-                                        genreOpen ? "rotate-180" : ""
-                                    }`}
-                                >
-                                    <path
-                                        d="M6 9l6 6 6-6"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
+                                Clear Filters
                             </button>
-                            {genreOpen && (
-                                <div className="absolute top-full mt-1 right-0 bg-gray-800 border border-gray-600 rounded-lg py-2 min-w-32 z-10">
-                                    <div className="text-sm text-gray-300">
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Action
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Drama
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Comedy
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Thriller
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Category dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setCategoryOpen(!categoryOpen)}
-                                className="flex items-center gap-2 bg-lime-400 text-black px-4 md:px-6 py-2 rounded-full text-sm font-semibold hover:bg-lime-500 transition-colors"
-                            >
-                                Category
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    className={`transition-transform ${
-                                        categoryOpen ? "rotate-180" : ""
-                                    }`}
-                                >
-                                    <path
-                                        d="M6 9l6 6 6-6"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
-                            </button>
-                            {categoryOpen && (
-                                <div className="absolute top-full mt-1 right-0 bg-gray-800 border border-gray-600 rounded-lg py-2 min-w-36 z-10">
-                                    <div className="text-sm text-gray-300">
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Blockbuster
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Independent
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Documentary
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Location dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setLocationOpen(!locationOpen)}
-                                className="flex items-center gap-2 bg-lime-400 text-black px-4 md:px-6 py-2 rounded-full text-sm font-semibold hover:bg-lime-500 transition-colors"
-                            >
-                                Location
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    className={`transition-transform ${
-                                        locationOpen ? "rotate-180" : ""
-                                    }`}
-                                >
-                                    <path
-                                        d="M6 9l6 6 6-6"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
-                            </button>
-                            {locationOpen && (
-                                <div className="absolute top-full mt-1 right-0 bg-gray-800 border border-gray-600 rounded-lg py-2 min-w-32 z-10">
-                                    <div className="text-sm text-gray-300">
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            New York
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Los Angeles
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Miami
-                                        </div>
-                                        <div className="hover:bg-gray-700 px-4 py-2 cursor-pointer">
-                                            Paris
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -219,7 +179,7 @@ export default function UpcomingProjects() {
                         <div className="text-gray-500 text-lg mb-6">No movie found!</div>
                         <button
                             onClick={() => setShowMovies(true)}
-                            className="bg-lime-400 text-black px-6 py-2 rounded-lg font-semibold hover:bg-lime-500 transition-colors"
+                            className="bg-[#b0d357] text-black px-6 py-2 rounded-lg font-semibold hover:bg-lime-500 transition-colors"
                         >
                             Show Sample Movies
                         </button>
@@ -228,16 +188,21 @@ export default function UpcomingProjects() {
                     <div className="w-full max-w-7xl">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                             <h2 className="text-white text-2xl font-bold">Upcoming Movies</h2>
-                            <button
-                                onClick={() => setShowMovies(false)}
-                                className="text-gray-400 hover:text-white transition-colors text-sm"
-                            >
-                                Back to No Movies
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setShowMovies(false)}
+                                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                                >
+                                    Back to No Movies
+                                </button>
+                                {filteredMovies.length === 0 && (
+                                    <span className="text-red-400 text-xs ml-2">No movies match filters</span>
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {sampleMovies.map((movie) => (
+                            {filteredMovies.map((movie) => (
                                 <div
                                     key={movie.id}
                                     className="bg-gray-900 rounded-xl overflow-hidden border border-gray-700 hover:border-lime-400 transition-all duration-300 hover:transform hover:scale-105 hover:shadow-2xl"
@@ -247,8 +212,9 @@ export default function UpcomingProjects() {
                                             src={movie.image}
                                             alt={movie.title}
                                             className="w-full h-56 object-cover"
+                                            loading="lazy"
                                         />
-                                        <div className="absolute top-3 right-3 bg-lime-400 text-black px-2 py-1 rounded-full text-xs font-bold">
+                                        <div className="absolute top-3 right-3 bg-[#b0d357] text-black px-2 py-1 rounded-full text-xs font-bold">
                                             {movie.status}
                                         </div>
                                         <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/70 px-2 py-1 rounded-full">
@@ -284,13 +250,18 @@ export default function UpcomingProjects() {
                                         </div>
 
                                         <div className="pt-3 border-t border-gray-700">
-                                            <span className="bg-lime-400/20 text-lime-400 px-3 py-1 rounded-full text-xs font-semibold">
+                                            <span className="bg-[#b0d357]/20 text-lime-400 px-3 py-1 rounded-full text-xs font-semibold">
                                                 {movie.category}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
                             ))}
+                            {filteredMovies.length === 0 && (
+                                <div className="col-span-full text-center text-gray-500 py-10">
+                                    No movies found for selected filters.
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
