@@ -1,6 +1,3 @@
-
-
-
 import { useState, useEffect } from "react";
 import { IoIosMenu } from "react-icons/io";
 import { Toaster, toast } from "react-hot-toast";
@@ -19,6 +16,19 @@ const Navbar = () => {
   const isMetaMaskAvailable = () =>
     typeof window !== "undefined" && window.ethereum?.isMetaMask;
 
+  const networkConfigs = {
+    sepolia: {
+      chainId: "0xaa36a7",
+    },
+    bsc: {
+      chainId: "0x38",
+      chainName: "BNB Smart Chain",
+      nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+      rpcUrls: ["https://bsc-dataseed1.binance.org/"],
+      blockExplorerUrls: ["https://bscscan.com/"],
+    },
+  };
+
   useEffect(() => {
     const checkWallets = setTimeout(() => {
       console.log("Phantom available:", isPhantomAvailable());
@@ -26,6 +36,15 @@ const Navbar = () => {
     }, 1000);
     return () => clearTimeout(checkWallets);
   }, []);
+
+  const getMetaMaskProvider = () => {
+    if (window.ethereum?.isMetaMask && !window.ethereum.providers) {
+      return window.ethereum;
+    } else if (window.ethereum?.providers) {
+      return window.ethereum.providers.find((p) => p.isMetaMask);
+    }
+    return null;
+  };
 
   const handleChainChange = async (e) => {
     const chain = e.target.value;
@@ -47,7 +66,6 @@ const Navbar = () => {
 
   const connectToSolana = async () => {
     if (!isPhantomAvailable()) throw new Error("Phantom wallet not installed.");
-
     try {
       const response = await window.solana.connect({ onlyIfTrusted: false });
       const address = response.publicKey.toString();
@@ -59,17 +77,44 @@ const Navbar = () => {
   };
 
   const connectToEthereum = async (chain) => {
-    if (!isMetaMaskAvailable()) throw new Error("MetaMask is not installed.");
+    const provider = getMetaMaskProvider();
+    if (!provider) throw new Error("MetaMask is not installed.");
 
     try {
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
+      if (chain === "bsc") await switchToBSCNetwork(provider);
+      if (chain === "ethereum") await switchToSepolia(provider);
+
+      const accounts = await provider.request({ method: "eth_requestAccounts" });
       setConnectionState(chain, accounts[0]);
       toast.success(`✅ Connected to ${chain.toUpperCase()} via MetaMask`);
     } catch (error) {
       handleWalletError(error, "MetaMask");
     }
+  };
+
+  const switchToBSCNetwork = async (provider) => {
+    try {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: networkConfigs.bsc.chainId }],
+      });
+    } catch (err) {
+      if (err.code === 4902) {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [networkConfigs.bsc],
+        });
+      } else {
+        throw err;
+      }
+    }
+  };
+
+  const switchToSepolia = async (provider) => {
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: networkConfigs.sepolia.chainId }],
+    });
   };
 
   const handleWalletError = (error, wallet) => {
@@ -80,12 +125,6 @@ const Navbar = () => {
     } else {
       throw new Error(`${wallet} connection failed: ${error.message}`);
     }
-  };
-
-  const setConnectionState = (chain, address) => {
-    setIsConnected(true);
-    setSelectedChain(chain);
-    setConnectedAddress(address);
   };
 
   const handleConnectionError = (error, chain) => {
@@ -99,20 +138,22 @@ const Navbar = () => {
     toast.error(msg);
   };
 
+  const setConnectionState = (chain, address) => {
+    setIsConnected(true);
+    setSelectedChain(chain);
+    setConnectedAddress(address);
+  };
+
   const handleDisconnect = async () => {
     try {
       if (selectedChain === "solana" && isPhantomAvailable()) {
         await window.solana.disconnect();
       }
+    } finally {
       setIsConnected(false);
       setConnectedAddress("");
       setSelectedChain("");
       toast.success("✅ Disconnected");
-    } catch (error) {
-      setIsConnected(false);
-      setConnectedAddress("");
-      setSelectedChain("");
-      toast.success("✅ Forced disconnect");
     }
   };
 
@@ -123,7 +164,7 @@ const Navbar = () => {
     <>
       <Toaster position="top-right" />
       <nav className="bg-black text-white py-6 px-6 md:px-10 flex justify-between items-center w-full z-50 relative">
-        {/* Logo Section */}
+        {/* Logo and Podcast */}
         <div className="flex items-center gap-6">
           <a href="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="Logo" width={160} />
@@ -148,7 +189,7 @@ const Navbar = () => {
           ))}
         </ul>
 
-        {/* Right Side Desktop Buttons */}
+        {/* Desktop Right Actions */}
         <div className="hidden lg:flex items-center gap-4">
           {!isConnected && (
             <select
@@ -201,16 +242,15 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Toggle Button */}
+        {/* Mobile Menu Toggle */}
         <button
           className="lg:hidden flex items-center justify-center w-12 h-12 rounded-full"
           onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle Menu"
         >
           <IoIosMenu size={36} color="#b0d357" />
         </button>
 
-        {/* Mobile Menu */}
+        {/* Original Mobile Menu */}
         {menuOpen && (
           <div className="lg:hidden absolute top-full left-0 w-full z-50 shadow-md">
             <ul className="flex flex-col items-center space-y-5 py-8 font-medium text-black text-2xl">
@@ -226,72 +266,70 @@ const Navbar = () => {
                 </li>
               ))}
 
-            {/* Mobile Chain Selector */}
-            <li className="w-4/5">
+              {/* Mobile Chain Selector */}
+              <li className="w-4/5">
                 <select
-                    value={selectedChain}
-                    onChange={handleChainChange}
-                    disabled={isConnecting || isConnected}
-                    className="w-full py-4 bg-black border border-lime-400 text-white rounded-full text-center focus:outline-none disabled:opacity-50"
+                  value={selectedChain}
+                  onChange={handleChainChange}
+                  disabled={isConnecting || isConnected}
+                  className="w-full py-4 bg-black border border-lime-400 text-white rounded-full text-center focus:outline-none disabled:opacity-50"
                 >
-                    <option value="">🔗 Select Chain</option>
-                    <option value="ethereum">🦊 Ethereum</option>
-                    <option value="solana">🌞 Solana</option>
-                    <option value="bsc">🟡 BSC</option>
+                  <option value="">🔗 Select Chain</option>
+                  <option value="ethereum">🦊 Ethereum</option>
+                  <option value="solana">🌞 Solana</option>
+                  <option value="bsc">🟡 BSC</option>
                 </select>
-            </li>
+              </li>
 
-            {isConnecting && (
+              {isConnecting && (
                 <li className="w-4/5 flex justify-center">
-                    <span className="flex items-center gap-2 text-lime-400 text-lg">
-                        <div className="w-4 h-4 border-2 border-lime-400 border-t-transparent rounded-full animate-spin"></div>
-                        Connecting...
-                    </span>
+                  <span className="flex items-center gap-2 text-lime-400 text-lg">
+                    <div className="w-4 h-4 border-2 border-lime-400 border-t-transparent rounded-full animate-spin"></div>
+                    Connecting...
+                  </span>
                 </li>
-            )}
+              )}
 
-            {!isConnected && !isConnecting && (
+              {!isConnected && !isConnecting && (
                 <>
-                    <li className="w-4/5">
-                        <button
-                            type="button"
-                            className="w-full py-4 bg-black text-white border border-white rounded-full font-bold hover:bg-white hover:text-black transition"
-                            onClick={() => setMenuOpen(false)}
-                        >
-                            Sign Up
-                        </button>
-                    </li>
-                    <li className="w-4/5">
-                        <button
-                            type="button"
-                            className="w-full py-4 bg-lime-400 text-black rounded-full font-semibold hover:bg-lime-300 transition"
-                            onClick={() => setMenuOpen(false)}
-                        >
-                            Login
-                        </button>
-                    </li>
-                </>
-            )}
-
-            {isConnected && (
-                <li className="w-4/5">
+                  <li className="w-4/5">
                     <button
-                        type="button"
-                        onClick={() => {
-                            handleDisconnect();
-                            setMenuOpen(false);
-                        }}
-                        className="w-full py-4 bg-red-500 text-white rounded-full font-bold hover:bg-red-600 transition"
+                      className="w-full py-4 bg-black text-white border border-white rounded-full font-bold hover:bg-white hover:text-black transition"
+                      onClick={() => setMenuOpen(false)}
                     >
-                        Disconnect
+                      Sign Up
                     </button>
-                    <div className="mt-2 text-center text-sm text-gray-700 bg-gray-100 rounded-full py-2">
-                        <span className="text-lime-600 font-semibold">{selectedChain.toUpperCase()}</span>
-                        <span className="mx-2 text-gray-400">|</span>
-                        <span className="font-mono">{truncateAddress(connectedAddress)}</span>
-                    </div>
+                  </li>
+                  <li className="w-4/5">
+                    <button
+                      className="w-full py-4 bg-lime-400 text-black rounded-full font-semibold hover:bg-lime-300 transition"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Login
+                    </button>
+                  </li>
+                </>
+              )}
+
+              {isConnected && (
+                <li className="w-4/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDisconnect();
+                      setMenuOpen(false);
+                    }}
+                    className="w-full py-4 bg-red-500 text-white rounded-full font-bold hover:bg-red-600 transition"
+                  >
+                    Disconnect
+                  </button>
+                  <div className="mt-2 text-center text-sm text-gray-700 bg-gray-100 rounded-full py-2">
+                    <span className="text-lime-600 font-semibold">{selectedChain.toUpperCase()}</span>
+                    <span className="mx-2 text-gray-400">|</span>
+                    <span className="font-mono">{truncateAddress(connectedAddress)}</span>
+                  </div>
                 </li>
-            )}
+              )}
             </ul>
           </div>
         )}
